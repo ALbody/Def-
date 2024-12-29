@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>برنامج التعرف على لغة الإشارة</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        video {
+            width: 100%;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        #resultLabel {
+            font-size: 20px;
+            color: #333;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>برنامج التعرف على لغة الإشارة</h1>
+        <video id="inputVideo" autoplay muted></video>
+        <p id="resultLabel">في انتظار حركات اليد...</p>
+    </div>
+
+    <script type="module">
+        // استيراد MediaPipe Hands
+        import { Hands } from "https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.min.js";
+        import { Camera } from "https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js";
+
+        const videoElement = document.getElementById("inputVideo");
+        const resultLabel = document.getElementById("resultLabel");
+
+        // إعداد MediaPipe Hands
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+        });
+
+        hands.setOptions({
+            maxNumHands: 1, // اكتشاف يد واحدة
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.5,
+        });
+
+        hands.onResults(onResults);
+
+        // كاميرا المدخلات
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({ image: videoElement });
+            },
+            width: 640,
+            height: 480,
+        });
+        camera.start();
+
+        // وظيفة التعامل مع نتائج MediaPipe Hands
+        function onResults(results) {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const landmarks = results.multiHandLandmarks[0];
+
+                // تحليل الإيماءة (إضافة تحليلك الخاص هنا)
+                const gesture = detectGesture(landmarks);
+
+                // عرض النتيجة في واجهة المستخدم
+                resultLabel.textContent = `إشارة معروفة: ${gesture}`;
+            } else {
+                resultLabel.textContent = "لا توجد حركة يد مكتشفة";
+            }
+        }
+
+        // وظيفة تحليل الإيماءات وتحويلها إلى نص
+        function detectGesture(landmarks) {
+            // مثال لتحليل بسيط بناءً على إحداثيات:
+            const thumbTip = landmarks[4]; // طرف الإبهام
+            const indexTip = landmarks[8]; // طرف السبابة
+
+            // إذا كان الإبهام قريبا من السبابة (رمز "OK")
+            const distance = Math.sqrt(
+                Math.pow(thumbTip.x - indexTip.x, 2) +
+                Math.pow(thumbTip.y - indexTip.y, 2) +
+                Math.pow(thumbTip.z - indexTip.z, 2)
+            );
+
+            if (distance < 0.1) {
+                return "OK";
+            }
+
+            // يمكن إضافة مزيد من الإيماءات والتحليل
+            return "حركة غير معروفة";
+        }
+    </script>
+</body>
+</html>
